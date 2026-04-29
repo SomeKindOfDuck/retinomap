@@ -5,7 +5,6 @@ from copy import deepcopy
 from pathlib import Path
 from tempfile import gettempdir
 
-# from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox,
                                QDoubleSpinBox, QFormLayout, QHBoxLayout,
                                QLineEdit, QMessageBox, QPushButton, QSpinBox,
@@ -15,22 +14,6 @@ from retinomap.config import ExperimentConfig
 from retinomap.player import StimulusPlayer
 from retinomap.preset import list_presets, load_preset, save_preset
 
-# class StimulusWorker(QThread):
-#     """刺激提示中にGUIの処理が奪われないようにするために、 刺激提示を別スレッドで実行するためのワーカー"""
-#     finished = Signal()
-# 
-#     def __init__(self, player: StimulusPlayer) -> None:
-#         super().__init__()
-#         self.player = player
-# 
-#     def run(self) -> None:
-#         try:
-#             self.player.play_experiment()
-#         finally:
-#             self.finished.emit()
-# 
-#     def stop(self) -> None:
-#         self.player.request_stop()
 
 class RetinomapGUI(QWidget):
     """刺激のパラメータやメタ情報の編集、及び刺激の開始と終了を担うGUI"""
@@ -176,14 +159,6 @@ class RetinomapGUI(QWidget):
         form.addRow("Log directory", self.log_directory)
 
         # --- buttons ---
-        # self.start_button = QPushButton("Start")
-
-        # root.addLayout(form)
-        # root.addLayout(preset_buttons)
-        # root.addWidget(self.start_button)
-
-        # self.setLayout(root)
-
         self.start_button = QPushButton("Start")
         self.stop_button = QPushButton("Stop")
 
