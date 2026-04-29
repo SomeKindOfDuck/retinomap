@@ -5,10 +5,13 @@ from copy import deepcopy
 from pathlib import Path
 from tempfile import gettempdir
 
+import numpy as np
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox,
                                QDoubleSpinBox, QFormLayout, QHBoxLayout,
-                               QLineEdit, QMessageBox, QPushButton, QSpinBox,
-                               QVBoxLayout, QWidget)
+                               QLabel, QLineEdit, QMessageBox, QPushButton,
+                               QSpinBox, QVBoxLayout, QWidget)
 
 from retinomap.config import ExperimentConfig
 from retinomap.player import StimulusPlayer
@@ -30,6 +33,7 @@ class RetinomapGUI(QWidget):
         self._refresh_presets()
         self.player = StimulusPlayer(self.config)
         self.player.open_window()
+        self.player.set_preview_callback(self._update_preview, fps=10.0)
 
     def _build_ui(self) -> None:
         root = QVBoxLayout()
@@ -157,6 +161,13 @@ class RetinomapGUI(QWidget):
 
         form.addRow("Enable log", self.log_enable)
         form.addRow("Log directory", self.log_directory)
+
+        self.preview_label = QLabel()
+        self.preview_label.setFixedSize(320, 240)
+        self.preview_label.setStyleSheet("background-color: #777;")
+        self.preview_label.setAlignment(Qt.AlignCenter)
+
+        root.addWidget(self.preview_label)
 
         # --- buttons ---
         self.start_button = QPushButton("Start")
@@ -293,6 +304,30 @@ class RetinomapGUI(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Save error", str(e))
 
+    def _update_preview(self, frame: np.ndarray) -> None:
+        if frame.ndim != 2:
+            return
+
+        frame = np.ascontiguousarray(frame)
+
+        h, w = frame.shape
+        qimg = QImage(
+            frame.data,
+            w,
+            h,
+            w,
+            QImage.Format_Grayscale8,
+        )
+
+        pixmap = QPixmap.fromImage(qimg).scaled(
+            self.preview_label.width(),
+            self.preview_label.height(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation,
+        )
+
+        self.preview_label.setPixmap(pixmap)
+
     def _on_start(self) -> None:
         try:
             config = self._widgets_to_config()
@@ -324,6 +359,16 @@ class RetinomapGUI(QWidget):
     def _on_stop(self) -> None:
         if hasattr(self, "player"):
             self.player.request_stop()
+
+            frame = np.full(
+                (
+                    self.config.stimulus_display.height,
+                    self.config.stimulus_display.width,
+                ),
+                127,
+                dtype=np.uint8,
+            )
+            self._update_preview(frame)
 
     def _on_experiment_finished(self) -> None:
         self.start_button.setEnabled(True)

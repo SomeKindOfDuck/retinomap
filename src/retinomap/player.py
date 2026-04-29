@@ -1,9 +1,8 @@
-# src/retinomap/player.py
-
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 import pygame
@@ -38,7 +37,9 @@ def draw_photodiode_square(frame: np.ndarray, config: cfg.ExperimentConfig) -> n
 class StimulusPlayer:
     config: cfg.ExperimentConfig
     stop_requested: bool = False
-
+    preview_callback: Callable[[np.ndarray], None] | None = None
+    preview_fps: float = 10.0
+    _last_preview_time: float = 0.0
 
     def open_window(self) -> None:
         d = self.config.stimulus_display
@@ -205,6 +206,8 @@ class StimulusPlayer:
 
             frame = draw_photodiode_square(frame, self.config)
 
+            self._emit_preview(frame)
+
             if frame.ndim != 2:
                 raise ValueError(f"Expected 2D grayscale frame, got shape={frame.shape}")
 
@@ -261,6 +264,17 @@ class StimulusPlayer:
 
             screen.fill((127, 127, 127))
 
+            preview_frame = np.full(
+                (
+                    self.config.stimulus_display.height,
+                    self.config.stimulus_display.width,
+                ),
+                127,
+                dtype=np.uint8,
+            )
+
+            self._emit_preview(preview_frame)
+
             p = self.config.photodiode
             if p.enable:
                 y0 = p.margin_px
@@ -277,6 +291,26 @@ class StimulusPlayer:
             pygame.display.flip()
 
             clock.tick(fps)
+
+    def set_preview_callback(
+        self,
+        callback: Callable[[np.ndarray], None] | None,
+        fps: float = 10.0,
+    ) -> None:
+        self.preview_callback = callback
+        self.preview_fps = fps
+        self._last_preview_time = 0.0
+
+    def _emit_preview(self, frame: np.ndarray) -> None:
+        if self.preview_callback is None:
+            return
+
+        now = time.perf_counter()
+        if now - self._last_preview_time < 1.0 / self.preview_fps:
+            return
+
+        self._last_preview_time = now
+        self.preview_callback(frame)
 
 
 def parse_args():
