@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pygame
+from PySide6.QtWidgets import QApplication
 
 import retinomap.config as cfg
 from retinomap.factory import (build_blocks, build_stimulus,
@@ -36,25 +37,66 @@ def draw_photodiode_square(frame: np.ndarray, config: cfg.ExperimentConfig) -> n
 @dataclass
 class StimulusPlayer:
     config: cfg.ExperimentConfig
+    stop_requested: bool = False
 
-    def play_experiment(self) -> None:
+
+    def open_window(self) -> None:
         d = self.config.stimulus_display
-        l = self.config.log
 
         pygame.init()
+
         self.warp_map = None
         if self.config.screen.enable_warp:
             self.warp_map = WarpMap(self.config)
 
         flags = pygame.FULLSCREEN if d.fullscreen else 0
-        screen = pygame.display.set_mode(
+        self.screen = pygame.display.set_mode(
             (d.width, d.height),
             flags,
             display=d.screen_index,
         )
         pygame.display.set_caption("retinomap")
 
-        clock = pygame.time.Clock()
+        self.clock = pygame.time.Clock()
+        self.draw_gray()
+
+    def draw_gray(self) -> None:
+        self.screen.fill((127, 127, 127))
+        pygame.display.flip()
+
+    def close_window(self) -> None:
+        pygame.quit()
+
+    def request_stop(self) -> None:
+        self.stop_requested = True
+
+    def reset_stop(self) -> None:
+        self.stop_requested = False
+
+    def play_experiment(self) -> None:
+        d = self.config.stimulus_display
+        l = self.config.log
+
+        if not hasattr(self, "screen"):
+            self.open_window()
+
+        screen = self.screen
+        clock = self.clock
+
+        # pygame.init()
+        # self.warp_map = None
+        # if self.config.screen.enable_warp:
+        #     self.warp_map = WarpMap(self.config)
+
+        # flags = pygame.FULLSCREEN if d.fullscreen else 0
+        # screen = pygame.display.set_mode(
+        #     (d.width, d.height),
+        #     flags,
+        #     display=d.screen_index,
+        # )
+        # pygame.display.set_caption("retinomap")
+
+        # clock = pygame.time.Clock()
 
         logger: FrameLogger | None = None
         if l.enable:
@@ -119,7 +161,8 @@ class StimulusPlayer:
         finally:
             if logger is not None:
                 logger.close()
-            pygame.quit()
+            # pygame.quit()
+            self.draw_gray()
 
     def play_stimulus(
         self,
@@ -138,8 +181,14 @@ class StimulusPlayer:
         start_time = time.perf_counter()
 
         while True:
+            QApplication.processEvents()
+
             now = time.perf_counter()
             t = now - start_time
+
+            if self.stop_requested:
+                self.draw_gray()
+                return False
 
             if t >= duration:
                 return True
@@ -197,6 +246,8 @@ class StimulusPlayer:
         start_time = time.perf_counter()
 
         while True:
+            QApplication.processEvents()
+
             t = time.perf_counter() - start_time
 
             if t >= duration:

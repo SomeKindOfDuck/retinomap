@@ -5,6 +5,7 @@ from copy import deepcopy
 from pathlib import Path
 from tempfile import gettempdir
 
+# from PySide6.QtCore import QThread, Signal
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox,
                                QDoubleSpinBox, QFormLayout, QHBoxLayout,
                                QLineEdit, QMessageBox, QPushButton, QSpinBox,
@@ -13,10 +14,26 @@ from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox,
 from retinomap.config import ExperimentConfig
 from retinomap.player import StimulusPlayer
 from retinomap.preset import list_presets, load_preset, save_preset
-from retinomap.stimulus_server import PygameStimulusProcess
 
+# class StimulusWorker(QThread):
+#     """刺激提示中にGUIの処理が奪われないようにするために、 刺激提示を別スレッドで実行するためのワーカー"""
+#     finished = Signal()
+# 
+#     def __init__(self, player: StimulusPlayer) -> None:
+#         super().__init__()
+#         self.player = player
+# 
+#     def run(self) -> None:
+#         try:
+#             self.player.play_experiment()
+#         finally:
+#             self.finished.emit()
+# 
+#     def stop(self) -> None:
+#         self.player.request_stop()
 
 class RetinomapGUI(QWidget):
+    """刺激のパラメータやメタ情報の編集、及び刺激の開始と終了を担うGUI"""
     def __init__(self) -> None:
         super().__init__()
 
@@ -28,6 +45,8 @@ class RetinomapGUI(QWidget):
         self._build_ui()
         self._load_config_to_widgets()
         self._refresh_presets()
+        self.player = StimulusPlayer(self.config)
+        self.player.open_window()
 
     def _build_ui(self) -> None:
         root = QVBoxLayout()
@@ -157,17 +176,33 @@ class RetinomapGUI(QWidget):
         form.addRow("Log directory", self.log_directory)
 
         # --- buttons ---
+        # self.start_button = QPushButton("Start")
+
+        # root.addLayout(form)
+        # root.addLayout(preset_buttons)
+        # root.addWidget(self.start_button)
+
+        # self.setLayout(root)
+
         self.start_button = QPushButton("Start")
+        self.stop_button = QPushButton("Stop")
+
+        button_layout = QHBoxLayout()
+        button_layout.addWidget(self.start_button)
+        button_layout.addWidget(self.stop_button)
 
         root.addLayout(form)
         root.addLayout(preset_buttons)
-        root.addWidget(self.start_button)
+        root.addLayout(button_layout)
 
         self.setLayout(root)
 
         self.load_button.clicked.connect(self._on_load)
         self.save_button.clicked.connect(self._on_save)
         self.start_button.clicked.connect(self._on_start)
+        self.stop_button.clicked.connect(self._on_stop)
+
+        self.stop_button.setEnabled(False)
 
     def _load_config_to_widgets(self) -> None:
         c = self.config
@@ -286,11 +321,46 @@ class RetinomapGUI(QWidget):
     def _on_start(self) -> None:
         try:
             config = self._widgets_to_config()
-            player = StimulusPlayer(config)
-            player.play_experiment()
+            self.config = config
+
+            self.player.config = config
+            self.player.stop_requested = False
+
+            self.player.warp_map = None
+            if config.screen.enable_warp:
+                from retinomap.warp import WarpMap
+                self.player.warp_map = WarpMap(config)
+
+            self.start_button.setEnabled(False)
+            self.stop_button.setEnabled(True)
+
+            self.player.play_experiment()
+
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            self.player.draw_gray()
             self.show()
+
         except Exception as e:
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
             QMessageBox.critical(self, "Run error", str(e))
+
+    def _on_stop(self) -> None:
+        if hasattr(self, "player"):
+            self.player.request_stop()
+
+    def _on_experiment_finished(self) -> None:
+        self.start_button.setEnabled(True)
+        self.stop_button.setEnabled(False)
+
+        if hasattr(self, "player"):
+            self.player.draw_gray()
+
+    def closeEvent(self, event) -> None:
+        if hasattr(self, "player"):
+            self.player.close_window()
+        super().closeEvent(event)
 
 
 def main() -> None:
