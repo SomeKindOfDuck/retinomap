@@ -23,7 +23,6 @@ class FrameLogger:
 
         if config is not None:
             prefix = []
-            print("Yeah")
             if config.experiment_id:
                 prefix.append(config.experiment_id)
 
