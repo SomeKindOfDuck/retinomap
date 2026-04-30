@@ -84,21 +84,6 @@ class StimulusPlayer:
         screen = self.screen
         clock = self.clock
 
-        # pygame.init()
-        # self.warp_map = None
-        # if self.config.screen.enable_warp:
-        #     self.warp_map = WarpMap(self.config)
-
-        # flags = pygame.FULLSCREEN if d.fullscreen else 0
-        # screen = pygame.display.set_mode(
-        #     (d.width, d.height),
-        #     flags,
-        #     display=d.screen_index,
-        # )
-        # pygame.display.set_caption("retinomap")
-
-        # clock = pygame.time.Clock()
-
         logger: FrameLogger | None = None
         if l.enable:
             logger = FrameLogger(base_dir=l.directory)
@@ -264,17 +249,6 @@ class StimulusPlayer:
 
             screen.fill((127, 127, 127))
 
-            preview_frame = np.full(
-                (
-                    self.config.stimulus_display.height,
-                    self.config.stimulus_display.width,
-                ),
-                127,
-                dtype=np.uint8,
-            )
-
-            self._emit_preview(preview_frame)
-
             p = self.config.photodiode
             if p.enable:
                 y0 = p.margin_px
@@ -289,6 +263,26 @@ class StimulusPlayer:
                 )
 
             pygame.display.flip()
+
+            preview_frame = np.full(
+                (
+                    self.config.stimulus_display.height,
+                    self.config.stimulus_display.width,
+                ),
+                127,
+                dtype=np.uint8,
+            )
+
+            p = self.config.photodiode
+            if p.enable:
+                y0 = p.margin_px
+                y1 = p.margin_px + p.size_px
+                x1 = self.config.stimulus_display.width - p.margin_px
+                x0 = x1 - p.size_px
+
+                preview_frame[y0:y1, x0:x1] = 0
+
+            self._emit_preview(preview_frame)
 
             clock.tick(fps)
 
