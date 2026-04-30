@@ -9,9 +9,9 @@ import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox,
-                               QDoubleSpinBox, QFormLayout, QHBoxLayout,
-                               QLabel, QLineEdit, QMessageBox, QPushButton,
-                               QSpinBox, QVBoxLayout, QWidget)
+                               QDoubleSpinBox, QFormLayout, QGroupBox,
+                               QHBoxLayout, QLabel, QLineEdit, QMessageBox,
+                               QPushButton, QSpinBox, QVBoxLayout, QWidget)
 
 from retinomap.config import ExperimentConfig
 from retinomap.player import StimulusPlayer
@@ -26,7 +26,7 @@ class RetinomapGUI(QWidget):
         self.config = ExperimentConfig()
 
         self.setWindowTitle("retinomap")
-        self.resize(420, 600)
+        self.resize(1200, 650)
 
         self._build_ui()
         self._load_config_to_widgets()
@@ -36,28 +36,53 @@ class RetinomapGUI(QWidget):
         self.player.set_preview_callback(self._update_preview, fps=10.0)
 
     def _build_ui(self) -> None:
-        root = QVBoxLayout()
-        form = QFormLayout()
+        root = QHBoxLayout()
+
+        left_col = QVBoxLayout()
+        center_col = QVBoxLayout()
+        right_col = QVBoxLayout()
+
+        # =====================
+        # left: preview + control
+        # =====================
+        self.preview_label = QLabel()
+        self.preview_label.setFixedSize(400, 290)
+        self.preview_label.setStyleSheet("background-color: #777;")
+        self.preview_label.setAlignment(Qt.AlignCenter)
+
+        self.start_button = QPushButton("Start")
+        self.stop_button = QPushButton("Stop")
+        self.stop_button.setEnabled(False)
+
+        control_buttons = QHBoxLayout()
+        control_buttons.addWidget(self.start_button)
+        control_buttons.addWidget(self.stop_button)
+
+        # left_col.addWidget(self.preview_label)
+        left_col.addWidget(self.preview_label, alignment=Qt.AlignHCenter)
+        left_col.addLayout(control_buttons)
+        left_col.addStretch()
+
+        # =====================
+        # center: experiment / preset / display / screen
+        # =====================
+        experiment_form = QFormLayout()
 
         self.experiment_id_edit = QLineEdit()
         self.experiment_id_edit.setPlaceholderText("e.g. mouse001")
 
-        form.addRow("Experiment ID", self.experiment_id_edit)
-
-        # --- preset ---
         self.preset_combo = QComboBox()
         self.preset_name = QLineEdit()
 
-        preset_buttons = QHBoxLayout()
-        self.load_button = QPushButton("Load")
-        self.save_button = QPushButton("Save as")
-        preset_buttons.addWidget(self.load_button)
-        preset_buttons.addWidget(self.save_button)
+        experiment_form.addRow("Experiment ID", self.experiment_id_edit)
+        experiment_form.addRow("Preset", self.preset_combo)
+        experiment_form.addRow("Preset name", self.preset_name)
 
-        form.addRow("Preset", self.preset_combo)
-        form.addRow("Preset name", self.preset_name)
+        experiment_box = QGroupBox("Experiment")
+        experiment_box.setLayout(experiment_form)
 
-        # --- display ---
+        display_form = QFormLayout()
+
         self.screen_index = QSpinBox()
         self.screen_index.setRange(0, 8)
 
@@ -73,13 +98,58 @@ class RetinomapGUI(QWidget):
 
         self.fullscreen = QCheckBox()
 
-        form.addRow("Stimulus screen index", self.screen_index)
-        form.addRow("Width", self.width)
-        form.addRow("Height", self.height)
-        form.addRow("FPS", self.fps)
-        form.addRow("Fullscreen", self.fullscreen)
+        display_form.addRow("Stimulus screen index", self.screen_index)
+        display_form.addRow("Width", self.width)
+        display_form.addRow("Height", self.height)
+        display_form.addRow("FPS", self.fps)
+        display_form.addRow("Fullscreen", self.fullscreen)
 
-        # --- stimulus ---
+        display_box = QGroupBox("Display")
+        display_box.setLayout(display_form)
+
+        screen_form = QFormLayout()
+
+        self.enable_warp = QCheckBox()
+
+        self.screen_width_cm = QDoubleSpinBox()
+        self.screen_width_cm.setRange(1, 1000)
+
+        self.screen_height_cm = QDoubleSpinBox()
+        self.screen_height_cm.setRange(1, 1000)
+
+        self.distance_cm = QDoubleSpinBox()
+        self.distance_cm.setRange(1, 1000)
+
+        screen_form.addRow("Enable warp", self.enable_warp)
+        screen_form.addRow("Screen width cm", self.screen_width_cm)
+        screen_form.addRow("Screen height cm", self.screen_height_cm)
+        screen_form.addRow("Distance cm", self.distance_cm)
+
+        screen_box = QGroupBox("Screen")
+        screen_box.setLayout(screen_form)
+
+        log_form = QFormLayout()
+
+        self.log_enable = QCheckBox()
+        self.log_directory = QLineEdit()
+
+        log_form.addRow("Enable log", self.log_enable)
+        log_form.addRow("Log directory", self.log_directory)
+
+        log_box = QGroupBox("Log")
+        log_box.setLayout(log_form)
+
+        center_col.addWidget(experiment_box)
+        center_col.addWidget(log_box)
+        center_col.addWidget(display_box)
+        center_col.addWidget(screen_box)
+        center_col.addStretch()
+
+        # =====================
+        # right: stimulus / trial / photodiode / log + preset buttons
+        # =====================
+        stimulus_form = QFormLayout()
+
         self.stimulus_type = QComboBox()
         self.stimulus_type.addItems(["moving_bar", "checker_bar", "sparse_noise"])
 
@@ -96,13 +166,17 @@ class RetinomapGUI(QWidget):
         self.reversal_rate.setRange(0, 60)
         self.reversal_rate.setDecimals(2)
 
-        form.addRow("Stimulus type", self.stimulus_type)
-        form.addRow("Speed px/s", self.speed)
-        form.addRow("Bar width px", self.bar_width)
-        form.addRow("Checker size px", self.checker_size)
-        form.addRow("Reversal rate Hz", self.reversal_rate)
+        stimulus_form.addRow("Stimulus type", self.stimulus_type)
+        stimulus_form.addRow("Speed px/s", self.speed)
+        stimulus_form.addRow("Bar width px", self.bar_width)
+        stimulus_form.addRow("Checker size px", self.checker_size)
+        stimulus_form.addRow("Reversal rate Hz", self.reversal_rate)
 
-        # --- trial ---
+        stimulus_box = QGroupBox("Stimulus")
+        stimulus_box.setLayout(stimulus_form)
+
+        trial_form = QFormLayout()
+
         self.directions = QLineEdit()
 
         self.repetitions = QSpinBox()
@@ -119,30 +193,17 @@ class RetinomapGUI(QWidget):
         self.isi.setRange(0, 600)
         self.isi.setDecimals(2)
 
-        form.addRow("Directions", self.directions)
-        form.addRow("Repetitions", self.repetitions)
-        form.addRow("Sweeps / direction", self.sweeps_per_direction)
-        form.addRow("ITI sec", self.iti)
-        form.addRow("ISI sec", self.isi)
+        trial_form.addRow("Directions", self.directions)
+        trial_form.addRow("Repetitions", self.repetitions)
+        trial_form.addRow("Sweeps / direction", self.sweeps_per_direction)
+        trial_form.addRow("ITI sec", self.iti)
+        trial_form.addRow("ISI sec", self.isi)
 
-        # --- screen / warp ---
-        self.enable_warp = QCheckBox()
+        trial_box = QGroupBox("Trial")
+        trial_box.setLayout(trial_form)
 
-        self.screen_width_cm = QDoubleSpinBox()
-        self.screen_width_cm.setRange(1, 1000)
+        photodiode_form = QFormLayout()
 
-        self.screen_height_cm = QDoubleSpinBox()
-        self.screen_height_cm.setRange(1, 1000)
-
-        self.distance_cm = QDoubleSpinBox()
-        self.distance_cm.setRange(1, 1000)
-
-        form.addRow("Enable warp", self.enable_warp)
-        form.addRow("Screen width cm", self.screen_width_cm)
-        form.addRow("Screen height cm", self.screen_height_cm)
-        form.addRow("Distance cm", self.distance_cm)
-
-        # --- photodiode ---
         self.photodiode_enable = QCheckBox()
 
         self.photodiode_size = QSpinBox()
@@ -151,35 +212,28 @@ class RetinomapGUI(QWidget):
         self.photodiode_margin = QSpinBox()
         self.photodiode_margin.setRange(0, 1000)
 
-        form.addRow("Photodiode", self.photodiode_enable)
-        form.addRow("Photodiode size px", self.photodiode_size)
-        form.addRow("Photodiode margin px", self.photodiode_margin)
+        photodiode_form.addRow("Photodiode", self.photodiode_enable)
+        photodiode_form.addRow("Photodiode size px", self.photodiode_size)
+        photodiode_form.addRow("Photodiode margin px", self.photodiode_margin)
 
-        # --- log ---
-        self.log_enable = QCheckBox()
-        self.log_directory = QLineEdit()
+        photodiode_box = QGroupBox("Photodiode")
+        photodiode_box.setLayout(photodiode_form)
 
-        form.addRow("Enable log", self.log_enable)
-        form.addRow("Log directory", self.log_directory)
+        self.load_button = QPushButton("Load")
+        self.save_button = QPushButton("Save as")
 
-        self.preview_label = QLabel()
-        self.preview_label.setFixedSize(320, 240)
-        self.preview_label.setStyleSheet("background-color: #777;")
-        self.preview_label.setAlignment(Qt.AlignCenter)
+        preset_buttons = QHBoxLayout()
+        preset_buttons.addWidget(self.load_button)
+        preset_buttons.addWidget(self.save_button)
 
-        root.addWidget(self.preview_label)
+        right_col.addWidget(stimulus_box)
+        right_col.addWidget(trial_box)
+        right_col.addWidget(photodiode_box)
+        right_col.addLayout(preset_buttons)
 
-        # --- buttons ---
-        self.start_button = QPushButton("Start")
-        self.stop_button = QPushButton("Stop")
-
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.start_button)
-        button_layout.addWidget(self.stop_button)
-
-        root.addLayout(form)
-        root.addLayout(preset_buttons)
-        root.addLayout(button_layout)
+        root.addLayout(left_col, 2)
+        root.addLayout(center_col, 2)
+        root.addLayout(right_col, 2)
 
         self.setLayout(root)
 
@@ -187,8 +241,6 @@ class RetinomapGUI(QWidget):
         self.save_button.clicked.connect(self._on_save)
         self.start_button.clicked.connect(self._on_start)
         self.stop_button.clicked.connect(self._on_stop)
-
-        self.stop_button.setEnabled(False)
 
     def _load_config_to_widgets(self) -> None:
         c = self.config
