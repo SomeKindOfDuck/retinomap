@@ -80,7 +80,7 @@ class PhotodiodeConfig:
 
 @dataclass
 class LogConfig:
-    enable: bool = True
+    enable: bool = False
     directory: str = "log"
 
 
