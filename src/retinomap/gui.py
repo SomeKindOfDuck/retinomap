@@ -58,9 +58,29 @@ class RetinomapGUI(QWidget):
         control_buttons.addWidget(self.start_button)
         control_buttons.addWidget(self.stop_button)
 
+        # --- test stimulus ---
+        self.test_type = QComboBox()
+        self.test_type.addItems(["full_field_flash", "checkerboard_reversal"])
+
+        self.test_duration = QDoubleSpinBox()
+        self.test_duration.setRange(1, 600)
+        self.test_duration.setDecimals(1)
+        self.test_duration.setValue(20.0)
+
+        self.test_button = QPushButton("Start test")
+
+        test_form = QFormLayout()
+        test_form.addRow("Test stimulus", self.test_type)
+        test_form.addRow("Duration sec", self.test_duration)
+
+        test_box = QGroupBox("Test")
+        test_box.setLayout(test_form)
+
         # left_col.addWidget(self.preview_label)
         left_col.addWidget(self.preview_label, alignment=Qt.AlignHCenter)
         left_col.addLayout(control_buttons)
+        left_col.addWidget(test_box)
+        left_col.addWidget(self.test_button)
         left_col.addStretch()
 
         # =====================
@@ -249,6 +269,7 @@ class RetinomapGUI(QWidget):
         self.save_button.clicked.connect(self._on_save)
         self.start_button.clicked.connect(self._on_start)
         self.stop_button.clicked.connect(self._on_stop)
+        self.test_button.clicked.connect(self._on_test)
         self.fullscreen.toggled.connect(self._on_fullscreen_toggled)
 
     def _load_config_to_widgets(self) -> None:
@@ -435,6 +456,26 @@ class RetinomapGUI(QWidget):
                 dtype=np.uint8,
             )
             self._update_preview(frame)
+
+    def _on_test(self) -> None:
+        try:
+            self.player.config = self._widgets_to_config()
+            self.player.ensure_window()
+            self.player.stop_requested = False
+
+            self.start_button.setEnabled(False)
+            self.stop_button.setEnabled(True)
+
+            self.player.play_test_stimulus(
+                test_type=self.test_type.currentText(),
+                duration=self.test_duration.value(),
+            )
+
+            self.start_button.setEnabled(True)
+            self.stop_button.setEnabled(False)
+            self.player.draw_gray()
+        except Exception as e:
+            QMessageBox.critical(self, "Test error", str(e))
 
     def _on_experiment_finished(self) -> None:
         self.start_button.setEnabled(True)

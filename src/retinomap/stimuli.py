@@ -182,3 +182,58 @@ class CheckerBar:
 
         if y1 > y0:
             img[y0:y1, :] = checker[y0:y1, :]
+
+
+@dataclass
+class FullFieldFlash:
+    width: int
+    height: int
+    period: float = 1.0
+    background: int = 127
+    dark: int = 0
+    bright: int = 255
+
+    def frame(self, t: float) -> tuple[ImageArray, FrameState]:
+        phase = (t % self.period) / self.period
+        value = self.bright if phase < 0.5 else self.dark
+
+        img = np.full((self.height, self.width), value, dtype=np.uint8)
+
+        state = {
+            "phase": phase,
+            "x0": 0,
+            "x1": self.width,
+            "y0": 0,
+            "y1": self.height,
+        }
+
+        return img, state
+
+
+@dataclass
+class FullFieldCheckerboard:
+    width: int
+    height: int
+    checker_size: int = 80
+    reversal_rate: float = 2.0
+    background: int = 127
+
+    def frame(self, t: float) -> tuple[ImageArray, FrameState]:
+        yy, xx = np.indices((self.height, self.width))
+        pattern = ((xx // self.checker_size) + (yy // self.checker_size)) % 2
+
+        reverse = int(t * self.reversal_rate) % 2 == 1
+        if reverse:
+            pattern = 1 - pattern
+
+        img = (pattern * 255).astype(np.uint8)
+
+        state = {
+            "phase": int(t * self.reversal_rate),
+            "x0": 0,
+            "x1": self.width,
+            "y0": 0,
+            "y1": self.height,
+        }
+
+        return img, state

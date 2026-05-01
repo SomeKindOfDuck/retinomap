@@ -12,6 +12,7 @@ import retinomap.config as cfg
 from retinomap.factory import (build_blocks, build_stimulus,
                                compute_sweep_duration)
 from retinomap.logger import FrameLogger
+from retinomap.stimuli import FullFieldCheckerboard, FullFieldFlash
 from retinomap.warp import WarpMap
 
 
@@ -167,6 +168,8 @@ class StimulusPlayer:
     def play_experiment(self) -> None:
         d = self.config.stimulus_display
         l = self.config.log
+
+        self.reset_stop()
 
         if not hasattr(self, "screen"):
             self.open_window()
@@ -328,6 +331,10 @@ class StimulusPlayer:
 
             t = time.perf_counter() - start_time
 
+            if self.stop_requested:
+                self.draw_gray()
+                return False
+
             if t >= duration:
                 return True
 
@@ -375,6 +382,54 @@ class StimulusPlayer:
             self._emit_preview(preview_frame)
 
             clock.tick(fps)
+
+    def play_test_stimulus(
+        self,
+        test_type: str = "full_field_flash",
+        duration: float = 20.0,
+    ) -> None:
+        d = self.config.stimulus_display
+        s = self.config.stimulus
+
+        self.reset_stop()
+        self.ensure_window()
+
+        if test_type == "full_field_flash":
+            stimulus = FullFieldFlash(
+                width=d.width,
+                height=d.height,
+                period=1.0,
+            )
+
+        elif test_type == "checkerboard_reversal":
+            stimulus = FullFieldCheckerboard(
+                width=d.width,
+                height=d.height,
+                checker_size=max(s.checker_size, 80),
+                reversal_rate=2.0,
+                background=s.background,
+            )
+
+        else:
+            self.draw_gray()
+            raise ValueError(f"Unknown test_type: {test_type}")
+
+        try:
+            self.play_stimulus(
+                screen=self.screen,
+                clock=self.clock,
+                stimulus=stimulus,
+                duration=duration,
+                fps=d.fps,
+                logger=None,
+                block_index=0,
+                stim_index=0,
+                stimulus_type=test_type,
+                direction="",
+                sweep_duration=duration,
+            )
+        finally:
+            self.draw_gray()
 
     def set_preview_callback(
         self,
