@@ -32,7 +32,7 @@ class RetinomapGUI(QWidget):
         self._load_config_to_widgets()
         self._refresh_presets()
         self.player = StimulusPlayer(self.config)
-        self.player.open_window()
+        self.player.ensure_window()
         self.player.set_preview_callback(self._update_preview, fps=10.0)
 
     def _build_ui(self) -> None:
@@ -249,6 +249,7 @@ class RetinomapGUI(QWidget):
         self.save_button.clicked.connect(self._on_save)
         self.start_button.clicked.connect(self._on_start)
         self.stop_button.clicked.connect(self._on_stop)
+        self.fullscreen.toggled.connect(self._on_fullscreen_toggled)
 
     def _load_config_to_widgets(self) -> None:
         c = self.config
@@ -298,12 +299,13 @@ class RetinomapGUI(QWidget):
 
         d = c.stimulus_display
         d.screen_index = self.screen_index.value()
-        d.width = self.width.value()
-        d.height = self.height.value()
         d.window_x = self.window_x.value()
         d.window_y = self.window_y.value()
         d.fps = self.fps.value()
         d.fullscreen = self.fullscreen.isChecked()
+        if not d.fullscreen:
+            d.width = self.width.value()
+            d.height = self.height.value()
 
         s = c.stimulus
         s.stimulus_type = self.stimulus_type.currentText()
@@ -398,7 +400,7 @@ class RetinomapGUI(QWidget):
             self.config = config
 
             self.player.config = config
-            self.player.reopen_window()
+            self.player.ensure_window()
             self.player.stop_requested = False
 
             self.player.warp_map = None
@@ -414,7 +416,6 @@ class RetinomapGUI(QWidget):
             self.start_button.setEnabled(True)
             self.stop_button.setEnabled(False)
             self.player.draw_gray()
-            self.show()
 
         except Exception as e:
             self.start_button.setEnabled(True)
@@ -441,6 +442,10 @@ class RetinomapGUI(QWidget):
 
         if hasattr(self, "player"):
             self.player.draw_gray()
+
+    def _on_fullscreen_toggled(self, checked: bool) -> None:
+        self.width.setEnabled(not checked)
+        self.height.setEnabled(not checked)
 
     def closeEvent(self, event) -> None:
         if hasattr(self, "player"):

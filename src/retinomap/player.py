@@ -40,6 +40,7 @@ class StimulusPlayer:
     preview_callback: Callable[[np.ndarray], None] | None = None
     preview_fps: float = 10.0
     _last_preview_time: float = 0.0
+    _current_window_state: tuple | None = None
 
     def open_window(self) -> None:
         if not pygame.get_init():
@@ -54,20 +55,58 @@ class StimulusPlayer:
         if pygame.display.get_init():
             pygame.display.quit()
 
-        if not d.fullscreen:
-            os.environ["SDL_VIDEO_WINDOW_POS"] = f"{d.window_x},{d.window_y}"
+        os.environ["SDL_VIDEO_WINDOW_POS"] = f"{d.window_x},{d.window_y}"
 
+        # pygame.display.init()
+
+        # desktop_sizes = pygame.display.get_desktop_sizes()
+
+        # if d.screen_index < 0 or d.screen_index >= len(desktop_sizes):
+        #     raise ValueError(
+        #         f"Invalid screen_index={d.screen_index}. "
+        #         f"Available displays: 0..{len(desktop_sizes) - 1}, "
+        #         f"sizes={desktop_sizes}"
+        #     )
+
+        # if d.fullscreen:
+        #     size = desktop_sizes[d.screen_index]
+        # else:
+        #     size = (d.width, d.height)
+
+        # flags = pygame.NOFRAME
+
+        # self.screen = pygame.display.set_mode(
+        #     size,
+        #     flags,
+        #     display=d.screen_index,
+        # )
+
+        # actual_width, actual_height = self.screen.get_size()
+        # d.width = actual_width
+        # d.height = actual_height
         pygame.display.init()
 
+        desktop_sizes = pygame.display.get_desktop_sizes()
+
+        if d.screen_index < 0 or d.screen_index >= len(desktop_sizes):
+            raise ValueError(
+                f"Invalid screen_index={d.screen_index}. "
+                f"Available displays: 0..{len(desktop_sizes) - 1}, "
+                f"sizes={desktop_sizes}"
+            )
+
         if d.fullscreen:
-            info = pygame.display.Info()
-            size = (info.current_w, info.current_h)
-            flags = pygame.FULLSCREEN
+            size = desktop_sizes[d.screen_index]
         else:
             size = (d.width, d.height)
-            flags = pygame.NOFRAME
 
-        self.screen = pygame.display.set_mode(size, flags)
+        flags = pygame.NOFRAME
+
+        self.screen = pygame.display.set_mode(
+            size,
+            flags,
+            display=d.screen_index,
+        )
 
         actual_width, actual_height = self.screen.get_size()
         d.width = actual_width
@@ -81,9 +120,40 @@ class StimulusPlayer:
         self.clock = pygame.time.Clock()
         self.draw_gray()
 
+    def _get_window_state(self) -> tuple:
+        d = self.config.stimulus_display
+
+        if d.fullscreen:
+            return (
+                d.fullscreen,
+                d.screen_index,
+                d.window_x,
+                d.window_y,
+            )
+
+        return (
+            d.fullscreen,
+            d.screen_index,
+            d.width,
+            d.height,
+            d.window_x,
+            d.window_y,
+        )
+
+    def ensure_window(self) -> None:
+        new_state = self._get_window_state()
+
+        if self._current_window_state == new_state:
+            return
+
+        self.reopen_window()
+
+        self._current_window_state = self._get_window_state()
+
     def draw_gray(self) -> None:
         self.screen.fill((127, 127, 127))
         pygame.display.flip()
+        pygame.event.pump()
 
     def close_window(self) -> None:
         pygame.quit()
