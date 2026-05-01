@@ -42,22 +42,42 @@ class StimulusPlayer:
     _last_preview_time: float = 0.0
 
     def open_window(self) -> None:
+        if not pygame.get_init():
+            pygame.init()
+        self.reopen_window()
+
+    def reopen_window(self) -> None:
+        import os
+
         d = self.config.stimulus_display
 
-        pygame.init()
+        if pygame.display.get_init():
+            pygame.display.quit()
+
+        if not d.fullscreen:
+            os.environ["SDL_VIDEO_WINDOW_POS"] = f"{d.window_x},{d.window_y}"
+
+        pygame.display.init()
+
+        if d.fullscreen:
+            info = pygame.display.Info()
+            size = (info.current_w, info.current_h)
+            flags = pygame.FULLSCREEN
+        else:
+            size = (d.width, d.height)
+            flags = pygame.NOFRAME
+
+        self.screen = pygame.display.set_mode(size, flags)
+
+        actual_width, actual_height = self.screen.get_size()
+        d.width = actual_width
+        d.height = actual_height
 
         self.warp_map = None
         if self.config.screen.enable_warp:
             self.warp_map = WarpMap(self.config)
 
-        flags = pygame.FULLSCREEN if d.fullscreen else 0
-        self.screen = pygame.display.set_mode(
-            (d.width, d.height),
-            flags,
-            display=d.screen_index,
-        )
         pygame.display.set_caption("retinomap")
-
         self.clock = pygame.time.Clock()
         self.draw_gray()
 

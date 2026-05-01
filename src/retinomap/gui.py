@@ -92,6 +92,12 @@ class RetinomapGUI(QWidget):
         self.height = QSpinBox()
         self.height.setRange(100, 10000)
 
+        self.window_x = QSpinBox()
+        self.window_x.setRange(-10000, 10000)
+
+        self.window_y = QSpinBox()
+        self.window_y.setRange(-10000, 10000)
+
         self.fps = QDoubleSpinBox()
         self.fps.setRange(1, 240)
         self.fps.setDecimals(1)
@@ -101,6 +107,8 @@ class RetinomapGUI(QWidget):
         display_form.addRow("Stimulus screen index", self.screen_index)
         display_form.addRow("Width", self.width)
         display_form.addRow("Height", self.height)
+        display_form.addRow("Window X", self.window_x)
+        display_form.addRow("Window Y", self.window_y)
         display_form.addRow("FPS", self.fps)
         display_form.addRow("Fullscreen", self.fullscreen)
 
@@ -249,6 +257,8 @@ class RetinomapGUI(QWidget):
         self.screen_index.setValue(d.screen_index)
         self.width.setValue(d.width)
         self.height.setValue(d.height)
+        self.window_x.setValue(d.window_x)
+        self.window_y.setValue(d.window_y)
         self.fps.setValue(d.fps)
         self.fullscreen.setChecked(d.fullscreen)
 
@@ -290,6 +300,8 @@ class RetinomapGUI(QWidget):
         d.screen_index = self.screen_index.value()
         d.width = self.width.value()
         d.height = self.height.value()
+        d.window_x = self.window_x.value()
+        d.window_y = self.window_y.value()
         d.fps = self.fps.value()
         d.fullscreen = self.fullscreen.isChecked()
 
@@ -386,6 +398,7 @@ class RetinomapGUI(QWidget):
             self.config = config
 
             self.player.config = config
+            self.player.reopen_window()
             self.player.stop_requested = False
 
             self.player.warp_map = None

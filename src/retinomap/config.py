@@ -30,7 +30,9 @@ class StimulusDisplayConfig:
     width: int = 800
     height: int = 600
     fps: float = 60.0
-    fullscreen: bool = True
+    fullscreen: bool = False
+    window_x: int = 0
+    window_y: int = 0
 
 
 @dataclass
