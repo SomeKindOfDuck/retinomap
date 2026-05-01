@@ -4,7 +4,7 @@ import random
 from typing import Iterator
 
 from retinomap.config import Direction, ExperimentConfig
-from retinomap.stimuli import CheckerBar, MovingBar, SparseNoise
+from retinomap.stimuli import CheckerBar, MovingBar
 
 # =========================
 # stimulus
@@ -33,15 +33,6 @@ def build_stimulus(config: ExperimentConfig, direction: Direction):
             direction=direction,
             background=s.background,
             reversal_rate=s.checker_reversal_rate,
-        )
-
-    elif s.stimulus_type == "sparse_noise":
-        return SparseNoise(
-            width=d.width,
-            height=d.height,
-            grid_size=s.grid_size,
-            density=s.density,
-            seed=s.seed,
         )
 
     else:
