@@ -12,7 +12,7 @@ Direction = Literal["left", "right", "up", "down"]
 class ScreenConfig:
     width_cm: float = 40.0
     height_cm: float = 30.0
-    distance_cm: float = 20.0
+    distance_cm: float = 10.0
     enable_warp: bool = True
 
     center_x_px: float | None = None
@@ -30,7 +30,7 @@ class StimulusDisplayConfig:
     width: int = 800
     height: int = 600
     fps: float = 60.0
-    fullscreen: bool = False
+    fullscreen: bool = True
     window_x: int = 0
     window_y: int = 0
 
@@ -49,8 +49,8 @@ class StimulusConfig:
     direction: Direction = "right"
     speed: float = 100.0
 
-    bar_width: int = 80
-    checker_size: int = 40
+    bar_width: int = 160
+    checker_size: int = 60
     checker_reversal_rate: float = 4.0
     background: int = 127
 
@@ -73,7 +73,7 @@ class TrialConfig:
 @dataclass
 class PhotodiodeConfig:
     enable: bool = True
-    size_px: int = 50
+    size_px: int = 100
     margin_px: int = 0
     value: int = 255
 
