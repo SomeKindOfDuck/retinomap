@@ -110,8 +110,8 @@ class ExperimentConfig:
 
         return cls(
             experiment_id=data.get("experiment_id", ""),
-            stimulus_display=StimulusDisplayConfig(**data.get("display", {})),
-            control_display=ControlDisplayConfig(**data.get("display", {})),
+            stimulus_display=StimulusDisplayConfig(**data.get("stimulus_display", {})),
+            control_display=ControlDisplayConfig(**data.get("control_display", {})),
             stimulus=StimulusConfig(**data.get("stimulus", {})),
             trial=TrialConfig(**data.get("trial", {})),
             log=LogConfig(**data.get("log", {})),
