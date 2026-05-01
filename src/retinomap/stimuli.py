@@ -182,31 +182,3 @@ class CheckerBar:
 
         if y1 > y0:
             img[y0:y1, :] = checker[y0:y1, :]
-
-
-@dataclass
-class SparseNoise:
-    width: int
-    height: int
-    grid_size: int = 40
-    update_rate: float = 2.0
-    density: float = 0.05
-    background: int = 127
-    seed: int = 0
-
-    def frame(self, t: float) -> ImageArray:
-        frame_index = int(t * self.update_rate)
-        rng = np.random.default_rng(self.seed + frame_index)
-
-        n_y = int(np.ceil(self.height / self.grid_size))
-        n_x = int(np.ceil(self.width / self.grid_size))
-
-        grid = np.full((n_y, n_x), self.background, dtype=np.uint8)
-
-        on_mask = rng.random((n_y, n_x)) < self.density
-        polarity = rng.choice(np.array([0, 255], dtype=np.uint8), size=(n_y, n_x))
-
-        grid[on_mask] = polarity[on_mask]
-
-        img = np.repeat(np.repeat(grid, self.grid_size, axis=0), self.grid_size, axis=1)
-        return img[: self.height, : self.width]
