@@ -28,6 +28,5 @@ dev = [
 ]
 
 [project.scripts]
-play = "retinomap.player:main"
 retinomap = "retinomap.gui:main"
 sanity-check = "retinomap.analysis.sanity_check:main"
