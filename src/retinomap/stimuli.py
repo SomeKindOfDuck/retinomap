@@ -18,7 +18,7 @@ class MovingBar:
     bar_width: int = 80
     speed: float = 200.0
     direction: Direction = "right"
-    background: int = 0
+    background: int = 127
     foreground: int = 255
 
     def frame(self, t: float) -> tuple[ImageArray, FrameState]:
